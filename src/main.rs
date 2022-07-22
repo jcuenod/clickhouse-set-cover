@@ -1,5 +1,5 @@
-use std::collections::VecDeque;
-use std::io::{BufWriter, Read, Write};
+// use std::collections::VecDeque;
+use std::io::{BufReader, BufWriter, ErrorKind, Write};
 
 mod clickhouse;
 mod set_cover;
@@ -7,19 +7,24 @@ mod set_cover;
 fn main() {
     let t_byte = (1 as u8).to_le_bytes();
     let f_byte = (0 as u8).to_le_bytes();
-
-    let byte_vec: Result<VecDeque<u8>, _> = std::io::stdin().bytes().collect();
-    let mut rowbinary_data = byte_vec.expect("Unable to read data");
-    let mut d = clickhouse::deserialize(&mut rowbinary_data);
-
     let mut stream = BufWriter::new(std::io::stdout());
-    while d.len() > 0 {
-        let set = d.pop_front();
-        if set_cover::set_cover_possible(&set.unwrap()) {
-            stream.write(&t_byte).expect("Could not write to stream");
-        } else {
-            stream.write(&f_byte).expect("Could not write to stream");
+    let mut buffer = BufReader::new(std::io::stdin());
+
+    loop {
+        let attempt = clickhouse::try_deserialize_row(&mut buffer);
+        match attempt {
+            Err(err) => match err.kind() {
+                ErrorKind::UnexpectedEof => break,
+                _ => panic!("An error occurred"),
+            },
+            Ok(vec_of_hashsets) => {
+                if set_cover::set_cover_possible(&vec_of_hashsets) {
+                    stream.write(&t_byte).expect("Could not write to stream");
+                } else {
+                    stream.write(&f_byte).expect("Could not write to stream");
+                }
+                stream.flush().unwrap();
+            }
         }
     }
-    stream.flush().unwrap();
 }

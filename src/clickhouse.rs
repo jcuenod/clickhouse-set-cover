@@ -1,56 +1,51 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::HashSet;
+use std::io::{BufReader, Error, ErrorKind, Read, Stdin};
 
-fn get_unsigned_leb128(buffer: &mut VecDeque<u8>) -> u64 {
+fn get_unsigned_leb128(buffer: &mut BufReader<Stdin>) -> Result<u64, Error> {
     let mut value = 0u64;
     let mut shift = 0;
 
-    while buffer.len() > 0 {
-        let byte = buffer.pop_front().expect("Couldn't get byte for leb128");
+    loop {
+        let mut byte: [u8; 1] = [0; 1];
+        buffer.read_exact(&mut byte)?;
 
-        value |= (byte as u64 & 0x7f) << shift;
+        value |= (byte[0] as u64 & 0x7f) << shift;
 
-        if byte & 0x80 == 0 {
+        if byte[0] & 0x80 == 0 {
             break;
         }
 
         shift += 7;
         if shift > 57 {
-            panic!("Not enough data");
+            return Err(Error::from(ErrorKind::InvalidData));
         }
     }
-    value
+    Ok(value)
 }
 
-fn read_size(buffer: &mut VecDeque<u8>) -> usize {
-    let size = get_unsigned_leb128(buffer);
+fn read_size(buffer: &mut BufReader<Stdin>) -> Result<usize, Error> {
+    let size = get_unsigned_leb128(buffer)?;
     let usize_from = usize::try_from(size);
     match usize_from {
-        Ok(result) => return result,
-        Err(_) => panic!("Couldn't convert leb128 value to length. Not enough data?"),
+        Ok(result) => return Ok(result),
+        Err(_) => Err(Error::from(ErrorKind::Other)),
     }
 }
 
-pub fn deserialize(rowbin: &mut VecDeque<u8>) -> VecDeque<Vec<HashSet<u32>>> {
-    let mut deserialized_data: Vec<Vec<HashSet<u32>>> = Vec::new();
-    while rowbin.len() > 0 {
-        // In CH rowbinary, rows are printed out sequentially
-        let mut row: Vec<HashSet<u32>> = Vec::new();
-        let outer_array_size = read_size(rowbin);
-        for _ in 0..outer_array_size {
-            let mut row_cell: HashSet<u32> = HashSet::new();
-            let inner_array_size = read_size(rowbin);
-            for _ in 0..inner_array_size {
-                let u32bytes = [
-                    rowbin.pop_front().expect("Could not read first u32 byte"),
-                    rowbin.pop_front().expect("Could not read second u32 byte"),
-                    rowbin.pop_front().expect("Could not read third u32 byte"),
-                    rowbin.pop_front().expect("Could not read fourth u32 byte"),
-                ];
-                row_cell.insert(u32::from_le_bytes(u32bytes));
-            }
-            row.push(row_cell);
+pub fn try_deserialize_row(buffer: &mut BufReader<Stdin>) -> Result<Vec<HashSet<u32>>, Error> {
+    let mut row: Vec<HashSet<u32>> = Vec::new();
+    let outer_array_size = read_size(buffer)?;
+    for _ in 0..outer_array_size {
+        let mut row_cell: HashSet<u32> = HashSet::new();
+        let inner_array_size = read_size(buffer)?;
+        for _ in 0..inner_array_size {
+            let mut u32_bytes: [u8; 4] = [0; 4];
+            buffer
+                .read_exact(&mut u32_bytes)
+                .expect("Could not read 4 bytes for u32 int");
+            row_cell.insert(u32::from_le_bytes(u32_bytes));
         }
-        deserialized_data.push(row);
+        row.push(row_cell);
     }
-    VecDeque::from(deserialized_data)
+    Ok(row)
 }
