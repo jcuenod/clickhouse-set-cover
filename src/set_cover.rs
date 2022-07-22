@@ -65,7 +65,6 @@ mod tests {
         ];
         assert_eq!(set_cover_possible(&failing_test), false);
 
-        // This set should does not cover (but was a buggy output):
         let failing_test: Vec<HashSet<u32>> = vec![
             HashSet::from([1, 2]),
             HashSet::from([1, 2]),
