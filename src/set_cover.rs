@@ -27,11 +27,51 @@ pub fn set_cover_possible(set_list: &Vec<HashSet<u32>>) -> bool {
     //    set_cover is still possible
     while mut_set_list.len() > 0 {
         if mut_set_list.len() >= mut_set_list[mut_set_list.len() - 1].len() {
-            if set_union(&mut_set_list).len() < mut_set_list[mut_set_list.len() - 1].len() {
+            if set_union(&mut_set_list).len() < mut_set_list.len() {
                 return false;
             }
         }
         mut_set_list.pop();
     }
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn set_cover_tests() {
+        let passing_test: Vec<HashSet<u32>> = vec![HashSet::from([1])];
+        assert_eq!(set_cover_possible(&passing_test), true);
+
+        let passing_test: Vec<HashSet<u32>> =
+            vec![HashSet::from([1]), HashSet::from([2]), HashSet::from([3])];
+        assert_eq!(set_cover_possible(&passing_test), true);
+
+        let passing_test: Vec<HashSet<u32>> = vec![
+            HashSet::from([1, 2, 3]),
+            HashSet::from([1, 2, 3]),
+            HashSet::from([1, 2, 3]),
+        ];
+        assert_eq!(set_cover_possible(&passing_test), true);
+
+        let failing_test: Vec<HashSet<u32>> = vec![HashSet::from([1]), HashSet::from([1])];
+        assert_eq!(set_cover_possible(&failing_test), false);
+
+        let failing_test: Vec<HashSet<u32>> = vec![
+            HashSet::from([1]),
+            HashSet::from([1]),
+            HashSet::from([2, 3]),
+        ];
+        assert_eq!(set_cover_possible(&failing_test), false);
+
+        // This set should does not cover (but was a buggy output):
+        let failing_test: Vec<HashSet<u32>> = vec![
+            HashSet::from([1, 2]),
+            HashSet::from([1, 2]),
+            HashSet::from([1, 2]),
+            HashSet::from([3, 4, 5]),
+        ];
+        assert_eq!(set_cover_possible(&failing_test), false);
+    }
 }
