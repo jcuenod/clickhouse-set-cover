@@ -17,13 +17,13 @@ The problem is that for a query to be satisified, there should be some way of as
 The problem may be understood by way of example:
 
 ```
-set_cover([1,2],[1,2]) 	     = True
-set_cover([1,2],[1])         = True
-set_cover([1],[1])           = False
-set_cover([1,2],[1,2,3])     = True
-set_cover([1,2],[1,2],[3])   = True
-set_cover([1,2],[2,3],[3,1]) = True
-set_cover([1],[1],[1,2,3])   = False
+set_cover([1,2],[1,2]) 	     // True
+set_cover([1,2],[1])         // True
+set_cover([1],[1])           // False
+set_cover([1,2],[1,2,3])     // True
+set_cover([1,2],[1,2],[3])   // True
+set_cover([1,2],[2,3],[3,1]) // True
+set_cover([1],[1],[1,2,3])   // False
 ```
 
 ## How it Works
